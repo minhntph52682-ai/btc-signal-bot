@@ -41,7 +41,7 @@ def cmd_start():
         "/tinhieu — phan tich TAT CA coin dang theo doi\n"
         "/them <code>doge</code> — them coin vao danh sach theo doi\n"
         "/xoa <code>doge</code> — bo coin khoi danh sach\n"
-        "/von <code>350</code> — tinh khoi luong vao lenh theo von\n"
+        "/von <code>bnb 300</code> — tinh khoi luong vao lenh (coin + von, thu tu tuy y)\n"
         "/kiemtra <code>btc</code> — ti le thang lich su\n"
         "/lenh — xem lenh dang mo tren OKX\n"
         "/list — danh sach coin theo doi\n"
@@ -67,7 +67,7 @@ def cmd_help():
         "/tinhieu — phan tich tat ca coin\n"
         "/kiemtra <code>btc</code> — ti le thang lich su (do chuan that)\n"
         "/lenh — xem lenh dang mo tren OKX\n"
-        "/von <code>350</code> — tinh khoi luong vao lenh theo von\n"
+        "/von <code>bnb 300</code> — tinh khoi luong vao lenh (coin + von)\n"
         "/them <code>doge</code> — them coin theo doi\n"
         "/xoa <code>doge</code> — bo coin theo doi\n"
         "/list — coin dang theo doi\n"
@@ -115,26 +115,40 @@ def cmd_gia(arg):
     return "\n".join(lines)
 
 
-def cmd_von(args):
+def cmd_von(args, last_coin=None):
     """
-    Tinh khoi luong vao lenh theo von. Cu phap:
-      /von 350          -> tinh cho tat ca coin dang co tin hieu
-      /von 350 sol      -> tinh cho 1 coin
+    Tinh khoi luong vao lenh theo von. Coin va so tien go THU TU NAO CUNG DUOC:
+      /von 350          -> coin vua kiem tra (neu co), khong thi tat ca coin manh
+      /von 350 sol      -> so tien truoc, coin sau
+      /von sol 350      -> coin truoc, so tien sau
     """
     if not args:
         return (
-            "Cu phap: <code>/von 350</code> hoac <code>/von 350 sol</code>\n"
-            "So la tong von (USDT)."
+            "Cu phap: <code>/von 350</code> , <code>/von bnb 300</code> hoac "
+            "<code>/von 300 bnb</code>."
         )
-    parts = args.split()
-    try:
-        account = float(parts[0].replace(",", "").replace("$", ""))
-    except ValueError:
-        return "Von khong hop le. Vi du: <code>/von 350</code>"
+    # Tach: token nao la SO -> von; token nao la CHU -> coin (khong quan trong thu tu)
+    account = None
+    coin = None
+    for p in args.split():
+        cleaned = p.replace(",", "").replace("$", "").replace("k", "000")
+        try:
+            val = float(cleaned)
+            if account is None:
+                account = val
+                continue
+        except ValueError:
+            pass
+        if coin is None:
+            coin = p
+    if account is None:
+        return "Chua thay so von. Vi du: <code>/von bnb 300</code>"
     if account <= 0:
         return "Von phai lon hon 0."
 
-    coin = parts[1] if len(parts) > 1 else None
+    # Khong go coin -> dung coin vua kiem tra gan nhat (/p, /tinhieu)
+    if coin is None and last_coin:
+        coin = last_coin.replace("USDT", "")
     symbols = [_norm_symbol(coin)] if coin else watchlist.get()
 
     lines = [
@@ -201,15 +215,38 @@ def _huong_dan_okx_key():
 
 
 def cmd_lenh():
-    """Xem cac vi the / lenh dang mo tren OKX."""
+    """Xem cac vi the / lenh dang mo tren OKX (kem TP/SL, volume, so du)."""
     if not okx_private.has_keys():
         return _huong_dan_okx_key()
     try:
         positions = okx_private.get_positions()
     except Exception as e:
         return f"Khong lay duoc vi the OKX:\n{e}"
+
+    # TP/SL va so du (khong bat buoc - loi thi bo qua)
+    try:
+        tpsl_map = okx_private.get_tpsl_map()
+    except Exception:
+        tpsl_map = {}
+    # So du thuc (cashBal cua USDT), khong phai equity
+    total_eq = None
+    try:
+        bal = okx_private.get_balance()
+        if bal:
+            for d in bal.get("details", []):
+                if d.get("ccy") == "USDT":
+                    total_eq = float(d.get("cashBal"))
+                    break
+            if total_eq is None and bal.get("totalEq"):
+                total_eq = float(bal.get("totalEq"))
+    except Exception:
+        total_eq = None
+
     if not positions:
-        return "\U0001F4C2 Hien khong co lenh nao dang mo tren OKX."
+        msg = "\U0001F4C2 Hien khong co lenh nao dang mo tren OKX."
+        if total_eq is not None:
+            msg += f"\n\U0001F4B3 So du: <b>{total_eq:,.2f} USDT</b>"
+        return msg
 
     lines = ["\U0001F4C2 <b>Cac lenh dang mo tren OKX</b>\n"]
     total_upl = 0.0
@@ -230,15 +267,36 @@ def cmd_lenh():
             liq = _fmt_price(float(p.get("liqPx")))
         except (TypeError, ValueError):
             liq = "-"
+        try:
+            vol = float(p.get("notionalUsd") or 0)
+        except (TypeError, ValueError):
+            vol = 0
+
+        # TP/SL: uu tien lenh dinh kem, roi den lenh OCO/dieu kien
+        tp = sl = ""
+        algo = p.get("closeOrderAlgo") or []
+        if algo:
+            tp = algo[0].get("tpTriggerPx") or ""
+            sl = algo[0].get("slTriggerPx") or ""
+        if (not tp or not sl) and inst in tpsl_map:
+            tp = tp or tpsl_map[inst]["tp"]
+            sl = sl or tpsl_map[inst]["sl"]
+        tp_txt = _fmt_price(float(tp)) if tp else "--"
+        sl_txt = _fmt_price(float(sl)) if sl else "--"
+
         total_upl += upl
         pnl_icon = "\U0001F4C8" if upl >= 0 else "\U0001F4C9"
         lines.append(
             f"{side_txt} <b>{name}</b> x{lever}\n"
             f"  • Entry: {_fmt_price(entry)} | Mark: {_fmt_price(mark)}\n"
+            f"  • TP/SL: <b>{tp_txt} / {sl_txt}</b>\n"
+            f"  • Volume: {vol:,.0f} USDT\n"
             f"  • {pnl_icon} Lai/Lo: <b>{upl:+.2f} USDT</b> ({upl_ratio:+.1f}%)\n"
             f"  • Gia thanh ly (liq): {liq}"
         )
     lines.append(f"\n\U0001F4B0 <b>Tong lai/lo tam tinh: {total_upl:+.2f} USDT</b>")
+    if total_eq is not None:
+        lines.append(f"\U0001F4B3 <b>So du hien tai: {total_eq:,.2f} USDT</b>")
     return "\n".join(lines)
 
 
@@ -309,9 +367,10 @@ def cmd_tinhieu(arg, format_signal):
     return "\n\n———\n\n".join(blocks)
 
 
-def handle(text, format_signal):
+def handle(text, format_signal, last_coin=None):
     """
     Nhan text tin nhan, tra ve chuoi tra loi (HTML) hoac None neu khong phai lenh.
+    last_coin: coin vua kiem tra gan nhat (de /von tu dung lai).
     """
     text = (text or "").strip()
     if not text.startswith("/"):
@@ -340,9 +399,10 @@ def handle(text, format_signal):
         return cmd_kiemtra(arg)
     if cmd in ("lenh", "vithe", "positions", "pos"):
         return cmd_lenh()
-    if cmd in ("von", "von", "size", "khoiluong"):
+    if cmd in ("von", "size", "khoiluong"):
         # /von can ca phan sau lenh (co the co 2 tham so: so tien + coin)
-        return cmd_von(text.split(None, 1)[1] if len(text.split(None, 1)) > 1 else "")
+        von_args = text.split(None, 1)[1] if len(text.split(None, 1)) > 1 else ""
+        return cmd_von(von_args, last_coin=last_coin)
 
     # Lenh khong biet
     return (

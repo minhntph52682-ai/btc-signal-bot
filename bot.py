@@ -32,6 +32,8 @@ _last_side = {}
 _last_sent_time = {}
 # Khoa Entry/SL/TP co dinh cho moi coin khi tin hieu xuat hien (symbol -> dict)
 _locked = {}
+# Coin vua kiem tra gan nhat cua tung chat (de /von tu dung lai)
+_last_coin = {}
 
 # File luu danh sach chat ID da nhan tin voi bot (de gui tin hieu tu dong)
 _SUBS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "subscribers.json")
@@ -185,14 +187,18 @@ def poll_commands(subs):
             _reply(chat_id, f"⏹ Da dung {n} bang gia truc tiep." if n else "Khong co gia truc tiep nao dang chay.")
             continue
 
+        # Ghi nho coin vua kiem tra (/p, /gia, /tinhieu <coin>) de /von dung lai
+        if cmd in ("gia", "price", "p", "tinhieu", "signal", "s") and arg:
+            _last_coin[cid] = _norm_symbol(arg)
+
         # /gia <coin> -> gia chay truc tiep (tu cap nhat lien tuc)
         if cmd in ("gia", "price", "p") and arg:
             start_live_price(chat_id, _norm_symbol(arg))
             print(f"  -> Gia truc tiep {arg} cho {name}")
             continue
 
-        # Tra loi neu la lenh
-        reply = commands.handle(text, format_signal)
+        # Tra loi neu la lenh (kem coin vua kiem tra gan nhat)
+        reply = commands.handle(text, format_signal, last_coin=_last_coin.get(cid))
         if reply:
             _reply(chat_id, reply)
             print(f"  -> Tra loi '{text}' cho {name} ({chat_type})")

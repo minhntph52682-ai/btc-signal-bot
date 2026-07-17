@@ -74,3 +74,28 @@ def get_balance():
     if not data:
         return None
     return data[0]
+
+
+def get_tpsl_map():
+    """
+    Lay TP/SL dang cho (lenh dieu kien/OCO) theo tung instId.
+    Tra ve dict: instId -> {"tp": <gia>, "sl": <gia>}.
+    """
+    result = {}
+    for ot in ("oco", "conditional"):
+        try:
+            data = _request("GET", f"/api/v5/trade/orders-algo-pending?ordType={ot}")
+        except Exception:
+            continue
+        for o in data:
+            inst = o.get("instId")
+            if not inst:
+                continue
+            tp = o.get("tpTriggerPx") or ""
+            sl = o.get("slTriggerPx") or ""
+            cur = result.setdefault(inst, {"tp": "", "sl": ""})
+            if tp and not cur["tp"]:
+                cur["tp"] = tp
+            if sl and not cur["sl"]:
+                cur["sl"] = sl
+    return result
