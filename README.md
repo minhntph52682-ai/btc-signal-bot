@@ -54,7 +54,7 @@ Bot se tu nho chat cua ban (luu vao `subscribers.json`) va tra loi ngay.
 | Lenh | Y nghia |
 |------|---------|
 | `/start` | Man hinh chao + huong dan |
-| `/gia btc` | Gia CHAY TRUC TIEP lien tuc, khong dung (chay nhieu coin cung luc) |
+| `/p btc` | Gia CHAY TRUC TIEP lien tuc, khong dung (chay nhieu coin cung luc) |
 | `/dunggia` | Dung gia truc tiep (`/dunggia btc` = dung 1 coin) |
 | `/tinhieu btc` | Phan tich LONG/SHORT + don bay + TP/SL (BAT KY coin nao) |
 | `/tinhieu` | Phan tich tat ca coin dang theo doi |

@@ -33,9 +33,9 @@ def cmd_start():
         "\U0001F44B <b>Chao mung den Bot tin hieu Crypto!</b>\n\n"
         "Bot bao gia va goi y <b>LONG / SHORT</b> + don bay dua tren phan tich ky thuat.\n\n"
         "<b>Cac lenh:</b>\n"
-        "/gia <code>btc</code> — gia CHAY TRUC TIEP lien tuc (khong dung)\n"
+        "/p <code>btc</code> — gia CHAY TRUC TIEP lien tuc (khong dung)\n"
         "/dunggia — dung gia truc tiep\n"
-        "/gia — gia tat ca coin (1 lan)\n"
+        "/p — gia tat ca coin (1 lan)\n"
         "/tinhieu <code>btc</code> — phan tich 1 coin (LONG/SHORT, don bay, TP, SL)\n"
         "/tinhieu — phan tich TAT CA coin dang theo doi\n"
         "/them <code>doge</code> — them coin vao danh sach theo doi\n"
@@ -58,9 +58,9 @@ def cmd_start():
 def cmd_help():
     return (
         "\U0001F4D6 <b>Huong dan</b>\n\n"
-        "/gia <code>btc</code> — gia chay truc tiep lien tuc (khong dung)\n"
+        "/p <code>btc</code> — gia chay truc tiep lien tuc (khong dung)\n"
         "/dunggia [<code>btc</code>] — dung gia truc tiep (1 coin hoac tat ca)\n"
-        "/gia — gia tat ca coin (1 lan)\n"
+        "/p — gia tat ca coin (1 lan)\n"
         "/tinhieu <code>sol</code> — phan tich chi tiet 1 coin\n"
         "/tinhieu — phan tich tat ca coin\n"
         "/kiemtra <code>btc</code> — ti le thang lich su (do chuan that)\n"

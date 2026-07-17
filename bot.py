@@ -30,6 +30,8 @@ import watchlist
 _last_side = {}
 # Luu thoi diem gui gan nhat cua tung coin (de gian cach khi nhac lai tin hieu)
 _last_sent_time = {}
+# Khoa Entry/SL/TP co dinh cho moi coin khi tin hieu xuat hien (symbol -> dict)
+_locked = {}
 
 # File luu danh sach chat ID da nhan tin voi bot (de gui tin hieu tu dong)
 _SUBS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "subscribers.json")
@@ -100,6 +102,8 @@ def format_signal(res, repeat=False, on_demand=False):
         lines.append("⚠️ <i>Tin hieu con YEU / thi truong chua ro - can nhac ky.</i>")
 
     if disp != "NEUTRAL" and res["sl"] is not None:
+        entry = res.get("entry", res["price"])
+        lines.append(f"\U0001F4CD Entry (diem vao): <b>{_fmt_price(entry)}</b>")
         lev = res.get("leverage")
         if lev:
             cap = res.get("leverage_max")
@@ -109,7 +113,7 @@ def format_signal(res, repeat=False, on_demand=False):
                 f"   <i>(nen dung che do co lap / isolated)</i>"
             )
         lines.append(f"\U0001F3AF TP (chot loi): <b>{_fmt_price(res['tp'])}</b>")
-        lines.append(f"\U0001F6D1 SL (cat lo): <b>{_fmt_price(res['sl'])}</b>")
+        lines.append(f"\U0001F6D1 SL (cat lo, CO DINH): <b>{_fmt_price(res['sl'])}</b>")
 
     lines.append("")
     lines.append("<i>Ly do:</i>")
@@ -221,7 +225,7 @@ def _live_price_line(symbol, price, prev, stopped=False):
             arrow = " \U0001F53B"   # tam giac xanh huong xuong
     now = datetime.datetime.now().strftime("%H:%M:%S")
     if stopped:
-        status = "⏹ da dung (go /gia de chay lai)"
+        status = "⏹ da dung (go /p de chay lai)"
     else:
         status = "\U0001F7E2 dang cap nhat lien tuc — go /dunggia de dung"
     return (
@@ -320,11 +324,24 @@ def scan_once(subs=None, send=True):
         if not send:
             continue
         if res["strength"] < config.MIN_SCORE or res["side"] == "NEUTRAL":
+            # Tin hieu khong con -> xoa muc da khoa de lan sau vao lai la lenh moi
+            _locked.pop(symbol, None)
             continue
 
         changed = _last_side.get(symbol) != res["side"]
         last_t = _last_sent_time.get(symbol, 0)
         due = (time.time() - last_t) >= config.RESEND_MINUTES * 60
+
+        # KHOA Entry/SL/TP khi tin hieu MOI xuat hien -> giu CO DINH cho cac lan nhac lai.
+        if changed or symbol not in _locked:
+            _locked[symbol] = {
+                "entry": res["price"],
+                "sl": res["sl"],
+                "tp": res["tp"],
+                "leverage": res["leverage"],
+                "leverage_max": res.get("leverage_max"),
+            }
+        lock = _locked[symbol]
 
         # Gui khi: tin hieu DOI CHIEU, HOAC den han gui lai (nhac lai tin hieu cu).
         # Neu ONLY_ON_CHANGE = True thi chi gui khi doi chieu (nhu cu).
@@ -332,7 +349,14 @@ def scan_once(subs=None, send=True):
             if config.ONLY_ON_CHANGE or not due:
                 continue
 
-        text = format_signal(res, repeat=not changed)
+        # Dung muc DA KHOA (Entry/SL/TP co dinh), gia hien tai van cap nhat.
+        disp = dict(res)
+        disp["entry"] = lock["entry"]
+        disp["sl"] = lock["sl"]
+        disp["tp"] = lock["tp"]
+        disp["leverage"] = lock["leverage"]
+        disp["leverage_max"] = lock["leverage_max"]
+        text = format_signal(disp, repeat=not changed)
         sent = 0
         for cid in list(subs):
             try:
