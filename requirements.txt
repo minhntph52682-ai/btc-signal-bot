@@ -1,0 +1,2 @@
+# Bot chi dung thu vien co san cua Python (urllib, json, threading...).
+# KHONG can cai them goi nao. File nay de trong la dung.

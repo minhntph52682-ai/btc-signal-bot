@@ -1,0 +1,28 @@
+# File dich vu systemd cho VPS / Oracle Cloud (Linux).
+# Giup bot tu chay lai khi loi, tu bat khi khoi dong lai may chu.
+#
+# Cach dung (tren may chu Linux):
+#   1. Chep code vao /opt/btc-signal-bot
+#   2. sudo cp deploy/btc-signal-bot.service /etc/systemd/system/
+#   3. Sua duong dan / user ben duoi neu can
+#   4. sudo systemctl daemon-reload
+#   5. sudo systemctl enable --now btc-signal-bot
+#   6. Xem log:  journalctl -u btc-signal-bot -f
+
+[Unit]
+Description=BTC Signal Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/btc-signal-bot
+# Doi token neu muon (nen dung bien moi truong thay vi ghi trong code):
+Environment=TELEGRAM_TOKEN=DAT_TOKEN_CUA_BAN_O_DAY
+ExecStart=/usr/bin/python3 bot.py
+Restart=always
+RestartSec=5
+User=ubuntu
+
+[Install]
+WantedBy=multi-user.target

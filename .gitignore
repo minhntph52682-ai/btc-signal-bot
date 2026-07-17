@@ -1,0 +1,16 @@
+# BI MAT - token bot (khong bao gio day len git)
+local_config.py
+
+# Du lieu chay (khong day len git / cloud)
+subscribers.json
+watchlist.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# He thong
+.DS_Store
+Thumbs.db

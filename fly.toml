@@ -1,0 +1,14 @@
+# Cau hinh Fly.io. Doi 'app' thanh ten rieng cua ban khi chay 'fly launch'.
+app = "btc-signal-bot"
+primary_region = "sin"   # Singapore - gan Viet Nam nhat
+
+[build]
+  dockerfile = "Dockerfile"
+
+# Bot la tien trinh chay lien tuc (khong phai web) -> luon bat 1 may, khong tu tat.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+[processes]
+  app = "python bot.py"
