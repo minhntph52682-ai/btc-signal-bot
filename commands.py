@@ -7,6 +7,7 @@ import market
 import strategy
 import watchlist
 import backtest
+import okx_private
 
 
 def _norm_symbol(text):
@@ -42,6 +43,7 @@ def cmd_start():
         "/xoa <code>doge</code> — bo coin khoi danh sach\n"
         "/von <code>350</code> — tinh khoi luong vao lenh theo von\n"
         "/kiemtra <code>btc</code> — ti le thang lich su\n"
+        "/lenh — xem lenh dang mo tren OKX\n"
         "/list — danh sach coin theo doi\n"
         "/dung — tat tin hieu tu dong cho noi nay\n"
         "/help — xem huong dan\n\n"
@@ -64,6 +66,7 @@ def cmd_help():
         "/tinhieu <code>sol</code> — phan tich chi tiet 1 coin\n"
         "/tinhieu — phan tich tat ca coin\n"
         "/kiemtra <code>btc</code> — ti le thang lich su (do chuan that)\n"
+        "/lenh — xem lenh dang mo tren OKX\n"
         "/von <code>350</code> — tinh khoi luong vao lenh theo von\n"
         "/them <code>doge</code> — them coin theo doi\n"
         "/xoa <code>doge</code> — bo coin theo doi\n"
@@ -178,6 +181,67 @@ def cmd_von(args):
     return "\n".join(lines)
 
 
+def _huong_dan_okx_key():
+    return (
+        "\U0001F511 <b>Chua cau hinh OKX API key</b>\n\n"
+        "De xem lenh dang mo, ban can tao API key (CHI DOC) tren OKX:\n\n"
+        "1. Vao OKX -> bam avatar -> <b>API</b> (hoac Settings -> API keys)\n"
+        "2. Bam <b>Create API key</b>\n"
+        "3. Dat <b>Passphrase</b> (tu chon, nho ky)\n"
+        "4. Quyen (Permissions): CHI chon <b>Read</b> (Doc). "
+        "<b>KHONG</b> bat Trade/Withdraw cho an toan.\n"
+        "5. Tao xong, copy: <b>API Key</b>, <b>Secret Key</b>, <b>Passphrase</b>\n"
+        "6. Dan vao file <code>local_config.py</code> tren may:\n"
+        "<code>OKX_API_KEY = \"...\"\n"
+        "OKX_API_SECRET = \"...\"\n"
+        "OKX_API_PASSPHRASE = \"...\"</code>\n"
+        "7. Khoi dong lai bot roi go /lenh lai.\n\n"
+        "<i>Key chi doc: du lo cung khong ai giao dich/rut tien duoc.</i>"
+    )
+
+
+def cmd_lenh():
+    """Xem cac vi the / lenh dang mo tren OKX."""
+    if not okx_private.has_keys():
+        return _huong_dan_okx_key()
+    try:
+        positions = okx_private.get_positions()
+    except Exception as e:
+        return f"Khong lay duoc vi the OKX:\n{e}"
+    if not positions:
+        return "\U0001F4C2 Hien khong co lenh nao dang mo tren OKX."
+
+    lines = ["\U0001F4C2 <b>Cac lenh dang mo tren OKX</b>\n"]
+    total_upl = 0.0
+    for p in positions:
+        inst = p.get("instId", "")
+        name = inst.split("-")[0]
+        pos = float(p.get("pos") or 0)
+        side = p.get("posSide")
+        if side not in ("long", "short"):
+            side = "long" if pos > 0 else "short"
+        side_txt = "\U0001F7E2 LONG" if side == "long" else "\U0001F534 SHORT"
+        entry = float(p.get("avgPx") or 0)
+        mark = float(p.get("markPx") or 0)
+        upl = float(p.get("upl") or 0)
+        upl_ratio = float(p.get("uplRatio") or 0) * 100
+        lever = p.get("lever") or "-"
+        try:
+            liq = _fmt_price(float(p.get("liqPx")))
+        except (TypeError, ValueError):
+            liq = "-"
+        total_upl += upl
+        pnl_icon = "\U0001F4C8" if upl >= 0 else "\U0001F4C9"
+        lines.append(
+            f"{side_txt} <b>{name}</b> x{lever}\n"
+            f"  • Entry: {_fmt_price(entry)} | Mark: {_fmt_price(mark)}\n"
+            f"  • {pnl_icon} Lai/Lo: <b>{upl:+.2f} USDT</b> ({upl_ratio:+.1f}%)\n"
+            f"  • Gia thanh ly (liq): {liq}"
+        )
+    lines.append(f"\n\U0001F4B0 <b>Tong lai/lo tam tinh: {total_upl:+.2f} USDT</b>")
+    return "\n".join(lines)
+
+
 def cmd_kiemtra(arg):
     """Backtest: ti le thang lich su that su cua chien luoc."""
     symbols = [_norm_symbol(arg)] if arg else watchlist.get()
@@ -274,6 +338,8 @@ def handle(text, format_signal):
         return cmd_tinhieu(arg, format_signal)
     if cmd in ("kiemtra", "backtest", "bt", "dochuan"):
         return cmd_kiemtra(arg)
+    if cmd in ("lenh", "vithe", "positions", "pos"):
+        return cmd_lenh()
     if cmd in ("von", "von", "size", "khoiluong"):
         # /von can ca phan sau lenh (co the co 2 tham so: so tien + coin)
         return cmd_von(text.split(None, 1)[1] if len(text.split(None, 1)) > 1 else "")

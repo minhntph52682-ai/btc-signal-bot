@@ -5,14 +5,50 @@ LUU Y BAO MAT: Token bot la bi mat. Neu bi lo, vao @BotFather -> /revoke de tao 
 """
 import os
 
-# ====== TELEGRAM ======
-# Token KHONG ghi thang o day (tranh lo khi push len GitHub).
-# Uu tien: bien moi truong TELEGRAM_TOKEN -> file local_config.py (da bi .gitignore bo qua).
+# ====== BI MAT (token, API key) ======
+# Tat ca token / API key nam trong file .env (da bi .gitignore chan, khong len GitHub).
+# Thu tu uu tien: bien moi truong that -> file .env -> file local_config.py (cu).
+def _load_dotenv():
+    env = {}
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                env[k.strip()] = v.strip().strip('"').strip("'")
+    except FileNotFoundError:
+        pass
+    return env
+
+
+_dotenv = _load_dotenv()
+
 try:
-    from local_config import TELEGRAM_TOKEN as _LOCAL_TOKEN
+    import local_config as _lc   # ho tro cach cu, khong bat buoc
 except ImportError:
-    _LOCAL_TOKEN = ""
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", _LOCAL_TOKEN)
+    _lc = None
+
+
+def _secret(name, default=""):
+    if os.environ.get(name):
+        return os.environ[name]
+    if name in _dotenv:
+        return _dotenv[name]
+    if _lc is not None and hasattr(_lc, name):
+        return getattr(_lc, name)
+    return default
+
+
+TELEGRAM_TOKEN = _secret("TELEGRAM_TOKEN")
+
+# ====== OKX API (de xem vi the / lenh dang mo) ======
+# Tao API key READ-ONLY tren OKX roi dan vao local_config.py. Xem huong dan /lenh.
+OKX_API_KEY = _secret("OKX_API_KEY")
+OKX_API_SECRET = _secret("OKX_API_SECRET")
+OKX_API_PASSPHRASE = _secret("OKX_API_PASSPHRASE")
 
 # ID cua group/kenh nhan tin hieu.
 # De trong roi chay:  py get_chat_id.py  de lay ID sau khi da add bot vao group.

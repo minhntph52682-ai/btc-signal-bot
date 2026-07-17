@@ -14,3 +14,5 @@ venv/
 # He thong
 .DS_Store
 Thumbs.db
+
+.env

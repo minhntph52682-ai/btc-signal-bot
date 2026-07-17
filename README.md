@@ -59,6 +59,7 @@ Bot se tu nho chat cua ban (luu vao `subscribers.json`) va tra loi ngay.
 | `/tinhieu btc` | Phan tich LONG/SHORT + don bay + TP/SL (BAT KY coin nao) |
 | `/tinhieu` | Phan tich tat ca coin dang theo doi |
 | `/kiemtra btc` | Ti le thang lich su that (backtest) |
+| `/lenh` | Xem lenh (vi the) dang mo tren OKX (can API key read-only) |
 | `/von 350` | Tinh khoi luong / ky quy vao lenh theo tong von |
 | `/them doge` | Them coin vao danh sach tu dong theo doi |
 | `/xoa doge` | Bo coin khoi danh sach |
