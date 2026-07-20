@@ -83,12 +83,19 @@ def format_signal(res, repeat=False, on_demand=False):
     if on_demand and disp == "NEUTRAL":
         disp = res.get("lean", "NEUTRAL")
 
-    if disp == "LONG":
-        head = "\U0001F7E2 <b>LONG</b> (Mua)"
-    elif disp == "SHORT":
-        head = "\U0001F534 <b>SHORT</b> (Ban)"
-    else:
+    actionable = bool(res.get("actionable"))
+    lean_word = {"LONG": "LONG (mua)", "SHORT": "SHORT (ban)"}.get(disp, "")
+
+    if disp == "NEUTRAL":
         head = "⚪ <b>DI NGANG</b> (chua ro huong)"
+    elif not actionable:
+        # Co huong nghieng nhung CHUA du dieu kien vao lenh -> chi quan sat,
+        # KHONG hien tieu de xanh/do de tranh nham la khuyen nghi vao lenh.
+        head = f"⚪ <b>QUAN SAT</b> — nghieng {lean_word}, chua du dieu kien vao lenh"
+    elif disp == "LONG":
+        head = "\U0001F7E2 <b>LONG</b> (Mua)"
+    else:  # SHORT du manh
+        head = "\U0001F534 <b>SHORT</b> (Ban)"
 
     stars = "⭐" * res["strength"] if res["strength"] else "-"
     tag = " \U0001F501 <i>nhac lai</i>" if repeat else ""
@@ -98,23 +105,35 @@ def format_signal(res, repeat=False, on_demand=False):
         f"Do manh: {stars} ({res['strength']}/4)",
     ]
 
-    # Khi hoi thang nhung tin hieu chua du manh -> nhac nho
-    if on_demand and disp != "NEUTRAL" and not res.get("actionable"):
-        lines.append("⚠️ <i>Tin hieu con YEU / thi truong chua ro - can nhac ky.</i>")
+    # Khi hoi thang nhung tin hieu chua du manh -> nhac nho ro rang
+    if on_demand and disp != "NEUTRAL" and not actionable:
+        lines.append(
+            "⚠️ <i>Chua du dieu kien vao lenh (tin hieu yeu / thi truong di ngang). "
+            "Chi nen QUAN SAT, chua nen vao.</i>"
+        )
 
     if disp != "NEUTRAL" and res["sl"] is not None:
         entry = res.get("entry", res["price"])
-        lines.append(f"\U0001F4CD Entry (diem vao): <b>{_fmt_price(entry)}</b>")
-        lev = res.get("leverage")
-        if lev:
-            cap = res.get("leverage_max")
-            extra = f" — OKX toi da x{cap}" if cap else ""
+        if actionable:
+            lines.append(f"\U0001F4CD Entry (diem vao): <b>{_fmt_price(entry)}</b>")
+            lev = res.get("leverage")
+            if lev:
+                cap = res.get("leverage_max")
+                extra = f" — OKX toi da x{cap}" if cap else ""
+                lines.append(
+                    f"\U0001F4A5 Don bay goi y: <b>x{lev}</b>{extra}\n"
+                    f"   <i>(nen dung che do co lap / isolated)</i>"
+                )
+            lines.append(f"\U0001F3AF TP (chot loi): <b>{_fmt_price(res['tp'])}</b>")
+            lines.append(f"\U0001F6D1 SL (cat lo, CO DINH): <b>{_fmt_price(res['sl'])}</b>")
+        else:
+            # Tin hieu yeu -> chi hien MUC THAM KHAO, KHONG goi y don bay
+            # (tranh nham thanh lenh vao).
+            lines.append("\U0001F4CA <i>Muc tham khao (chi khi thi truong xac nhan ro):</i>")
             lines.append(
-                f"\U0001F4A5 Don bay goi y: <b>x{lev}</b>{extra}\n"
-                f"   <i>(nen dung che do co lap / isolated)</i>"
+                f"   Entry ~{_fmt_price(entry)} | "
+                f"TP ~{_fmt_price(res['tp'])} | SL ~{_fmt_price(res['sl'])}"
             )
-        lines.append(f"\U0001F3AF TP (chot loi): <b>{_fmt_price(res['tp'])}</b>")
-        lines.append(f"\U0001F6D1 SL (cat lo, CO DINH): <b>{_fmt_price(res['sl'])}</b>")
 
     lines.append("")
     lines.append("<i>Ly do:</i>")
@@ -328,7 +347,8 @@ def scan_once(subs=None, send=True):
 
         if not send:
             continue
-        if res["strength"] < config.MIN_SCORE or res["side"] == "NEUTRAL":
+        # Chi tu dong bao khi la SETUP LENH thuc su (du yeu to + qua bo loc).
+        if not res.get("actionable"):
             # Tin hieu khong con -> xoa khoa de lan sau vao lai la lenh moi
             locks.clear(symbol)
             continue

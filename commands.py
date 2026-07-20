@@ -171,7 +171,8 @@ def cmd_von(args, last_coin=None):
         direction = res.get("lean") if coin else res["side"]
         if direction == "NEUTRAL" or not res.get("leverage"):
             continue
-        if not coin and res["strength"] < config.MIN_SCORE:
+        # Liet ke tat ca coin -> chi coin la SETUP LENH thuc su (du yeu to).
+        if not coin and not res.get("actionable"):
             continue
         res = locks.apply(res)   # Entry/SL da khoa -> vol on dinh, khong troi
         # Vao lenh tinh theo ENTRY da khoa (co dinh) va SL da khoa
@@ -308,7 +309,7 @@ def cmd_kiemtra(arg):
     """Backtest: ti le thang lich su that su cua chien luoc."""
     symbols = [_norm_symbol(arg)] if arg else watchlist.get()
     lines = ["\U0001F9EA <b>Kiem tra lich su (backtest)</b>"]
-    lines.append(f"<i>Khung {config.INTERVAL}, {config.MIN_SCORE}/4 diem tro len:</i>\n")
+    lines.append(f"<i>Khung {config.INTERVAL}, {config.SETUP_MIN_SCORE}/4 diem (du yeu to):</i>\n")
     for sym in symbols:
         try:
             st = backtest.backtest(sym)

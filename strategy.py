@@ -169,16 +169,20 @@ def analyze(symbol, candles):
     #    RSI > 50 -> ung ho LONG ; RSI < 50 -> ung ho SHORT.
     #    Tranh vao lenh khi da qua mua/qua ban (de bi dao chieu).
     if r is not None:
-        if r > 50 and r < config.RSI_OVERBOUGHT:
+        long_min = config.RSI_MID + config.RSI_MOMENTUM_MARGIN   # vd 55
+        short_max = config.RSI_MID - config.RSI_MOMENTUM_MARGIN   # vd 45
+        if r > long_min and r < config.RSI_OVERBOUGHT:
             score += 1
-            reasons.append(f"RSI={r:.0f} > 50 (dong luong tang)")
-        elif r < 50 and r > config.RSI_OVERSOLD:
+            reasons.append(f"RSI={r:.0f} > {long_min:.0f} (dong luong tang)")
+        elif r < short_max and r > config.RSI_OVERSOLD:
             score -= 1
-            reasons.append(f"RSI={r:.0f} < 50 (dong luong giam)")
+            reasons.append(f"RSI={r:.0f} < {short_max:.0f} (dong luong giam)")
         elif r >= config.RSI_OVERBOUGHT:
             reasons.append(f"RSI={r:.0f} qua mua - than trong")
         elif r <= config.RSI_OVERSOLD:
             reasons.append(f"RSI={r:.0f} qua ban - than trong")
+        else:
+            reasons.append(f"RSI={r:.0f} quanh 50 (dong luong yeu, khong tinh diem)")
 
     # Xac dinh huong. 'lean' = huong nghieng theo diem (luon co khi diem != 0),
     # dung khi nguoi dung HOI THANG 1 coin. 'side' = tin hieu du manh de tu dong bao.
@@ -224,12 +228,16 @@ def analyze(symbol, candles):
 
     leverage, lev_cap = suggest_leverage(price, sl, abs(score), symbol)
 
+    # SETUP LENH thuc su: phai co huong (qua bo loc trend/da khung) VA hoi tu
+    # du so yeu to (SETUP_MIN_SCORE). Thieu yeu to -> chi QUAN SAT, khong vao lenh.
+    actionable = side in ("LONG", "SHORT") and abs(score) >= config.SETUP_MIN_SCORE
+
     return {
         "symbol": symbol,
         "price": price,
         "side": side,          # tin hieu du manh (da qua bo loc) - dung cho tu dong bao
         "lean": lean,          # huong nghieng theo diem - dung khi hoi thang 1 coin
-        "actionable": side in ("LONG", "SHORT"),
+        "actionable": actionable,
         "score": score,
         "strength": abs(score),   # 0..4
         "rsi": r,

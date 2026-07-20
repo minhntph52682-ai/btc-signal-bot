@@ -76,12 +76,25 @@ EMA_SLOW = 50        # EMA cham (xu huong dai)
 RSI_PERIOD = 14
 RSI_OVERBOUGHT = 70
 RSI_OVERSOLD = 30
+# Nguong DONG LUONG cho RSI: chi cong diem khi RSI du XA khoi 50.
+#   LONG  can RSI > 50 + MARGIN  (mac dinh > 55)
+#   SHORT can RSI < 50 - MARGIN  (mac dinh < 45)
+# Tang MARGIN -> tin hieu chat hon. Vi du RSI=51 se KHONG con duoc tinh diem
+# (tranh "4/4" gia tao khi RSI chi nhinh tren 50 mot chut).
+RSI_MID = 50
+RSI_MOMENTUM_MARGIN = 5
 ATR_PERIOD = 14
 ATR_SL_MULT = 2.0    # He so ATR de tinh cat lo (Stop Loss)
 ATR_TP_MULT = 2.0    # He so ATR de tinh chot loi (Take Profit)
 
 # Do manh toi thieu de bao tin hieu (so diem tren tong 4). >=3 la manh.
 MIN_SCORE = 3
+
+# So YEU TO toi thieu (tren 4) phai HOI TU cung huong thi moi coi la SETUP LENH
+# thuc su (hien Entry / don bay / TP / SL). Thieu yeu to nao -> chi QUAN SAT.
+#   4 = phai DU CA 4 yeu to (EMA, gia vs EMA, MACD, RSI) -> chat che nhat.
+#   3 = cho phep thieu 1 yeu to.
+SETUP_MIN_SCORE = 4
 
 # ====== DON BAY (LEVERAGE) ======
 # Bot goi y don bay dua tren do manh tin hieu + do bien dong (ATR).

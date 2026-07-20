@@ -42,12 +42,8 @@ def backtest(symbol, interval=None, limit=1000):
     i = warmup
     while i < n - 1:
         res = strategy.analyze(symbol, candles[: i + 1])
-        if (
-            res is None
-            or res["side"] == "NEUTRAL"
-            or res["strength"] < config.MIN_SCORE
-            or res["sl"] is None
-        ):
+        # Chi vao lenh khi la SETUP thuc su (du yeu to) - dung luat nhu live.
+        if res is None or not res.get("actionable") or res["sl"] is None:
             i += 1
             continue
 
@@ -128,7 +124,7 @@ def format_report(st):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith("-")]
     symbols = [args[0].upper()] if args else config.SYMBOLS
-    print(f"Backtest tren khung {config.INTERVAL} (MIN_SCORE={config.MIN_SCORE})...\n")
+    print(f"Backtest tren khung {config.INTERVAL} (SETUP_MIN_SCORE={config.SETUP_MIN_SCORE}/4)...\n")
     for sym in symbols:
         try:
             st = backtest(sym)
