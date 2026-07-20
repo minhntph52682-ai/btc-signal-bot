@@ -370,9 +370,37 @@ def scan_once(subs=None, send=True):
     return results
 
 
+def start_health_server():
+    """Web server nho de cloud (Render...) thay co cong mo -> khong tat dich vu."""
+    import http.server
+    import socketserver
+
+    port = int(os.environ.get("PORT", "10000"))
+
+    class _H(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"BTC signal bot is running")
+
+        def log_message(self, *a):
+            pass  # khong in log HTTP cho do roi
+
+    try:
+        srv = socketserver.TCPServer(("", port), _H)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        print(f"Health server chay tren cong {port}")
+    except Exception as e:
+        print(f"[health server loi] {e}")
+
+
 def main():
     once = "--once" in sys.argv
     subs = load_subscribers()
+
+    if not config.TELEGRAM_TOKEN:
+        print("!!! CHUA CO TELEGRAM_TOKEN. Tren cloud: vao Environment dat bien "
+              "TELEGRAM_TOKEN. O may: dien vao file .env. Bot se khong doc/gui duoc.")
 
     print("=== BTC Signal Bot ===")
     print(f"Coin: {', '.join(config.SYMBOLS)}")
@@ -384,6 +412,7 @@ def main():
         scan_once(subs=subs, send=bool(subs))
         return
 
+    start_health_server()   # cho cloud (Render) thay cong mo
     print("Bot dang chay. Vao Telegram go /start de bat dau (Ctrl+C de dung).")
     last_scan = 0.0
     while True:
