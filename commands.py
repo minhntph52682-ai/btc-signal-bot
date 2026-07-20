@@ -8,6 +8,7 @@ import strategy
 import watchlist
 import backtest
 import okx_private
+import locks
 
 
 def _norm_symbol(text):
@@ -172,7 +173,10 @@ def cmd_von(args, last_coin=None):
             continue
         if not coin and res["strength"] < config.MIN_SCORE:
             continue
-        ps = strategy.position_size(account, res["price"], res["sl"], res["leverage"])
+        res = locks.apply(res)   # Entry/SL da khoa -> vol on dinh, khong troi
+        # Vao lenh tinh theo ENTRY da khoa (co dinh) va SL da khoa
+        entry = res.get("entry", res["price"])
+        ps = strategy.position_size(account, entry, res["sl"], res["leverage"])
         if not ps:
             continue
         found = True
@@ -183,7 +187,7 @@ def cmd_von(args, last_coin=None):
             f"  • Ky quy bo vao (margin): <b>{ps['margin']:,.1f} USDT</b>\n"
             f"  • Gia tri lenh (volume): <b>{ps['notional']:,.0f} USDT</b>\n"
             f"  • So luong: ~{ps['qty']:.4f} {sym.replace('USDT','')}\n"
-            f"  • Vao ~{_fmt_price(res['price'])} | SL {_fmt_price(res['sl'])} "
+            f"  • Entry {_fmt_price(entry)} | SL {_fmt_price(res['sl'])} "
             f"| TP {_fmt_price(res['tp'])}"
         )
     if not found:
@@ -342,6 +346,7 @@ def cmd_tinhieu(arg, format_signal):
             return f"<b>{sym}</b>: loi lay du lieu ({e})"
         if res is None:
             return f"<b>{sym}</b>: chua du du lieu"
+        res = locks.apply(res)   # dung SL da khoa (khong troi theo gia)
         return format_signal(res, on_demand=True)
 
     # Tat ca coin -> hien huong (long/short) cua TUNG coin, giong khi hoi rieng.
@@ -355,6 +360,7 @@ def cmd_tinhieu(arg, format_signal):
             continue
         if res is None:
             continue
+        res = locks.apply(res)   # dung SL da khoa (khong troi theo gia)
         block = format_signal(res, on_demand=True)
         if res.get("actionable"):
             strong.append(block)

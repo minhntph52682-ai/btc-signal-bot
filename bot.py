@@ -25,13 +25,12 @@ import strategy
 import telegram_bot
 import commands
 import watchlist
+import locks
 
 # Luu tin hieu lan truoc cua tung coin de tranh spam (ONLY_ON_CHANGE)
 _last_side = {}
 # Luu thoi diem gui gan nhat cua tung coin (de gian cach khi nhac lai tin hieu)
 _last_sent_time = {}
-# Khoa Entry/SL/TP co dinh cho moi coin khi tin hieu xuat hien (symbol -> dict)
-_locked = {}
 # Coin vua kiem tra gan nhat cua tung chat (de /von tu dung lai)
 _last_coin = {}
 
@@ -330,24 +329,16 @@ def scan_once(subs=None, send=True):
         if not send:
             continue
         if res["strength"] < config.MIN_SCORE or res["side"] == "NEUTRAL":
-            # Tin hieu khong con -> xoa muc da khoa de lan sau vao lai la lenh moi
-            _locked.pop(symbol, None)
+            # Tin hieu khong con -> xoa khoa de lan sau vao lai la lenh moi
+            locks.clear(symbol)
             continue
 
         changed = _last_side.get(symbol) != res["side"]
         last_t = _last_sent_time.get(symbol, 0)
         due = (time.time() - last_t) >= config.RESEND_MINUTES * 60
 
-        # KHOA Entry/SL/TP khi tin hieu MOI xuat hien -> giu CO DINH cho cac lan nhac lai.
-        if changed or symbol not in _locked:
-            _locked[symbol] = {
-                "entry": res["price"],
-                "sl": res["sl"],
-                "tp": res["tp"],
-                "leverage": res["leverage"],
-                "leverage_max": res.get("leverage_max"),
-            }
-        lock = _locked[symbol]
+        # KHOA Entry/SL/TP khi tin hieu MOI -> giu CO DINH (dung chung voi /tinhieu, /von).
+        disp = locks.apply(res, renew=changed)
 
         # Gui khi: tin hieu DOI CHIEU, HOAC den han gui lai (nhac lai tin hieu cu).
         # Neu ONLY_ON_CHANGE = True thi chi gui khi doi chieu (nhu cu).
@@ -355,13 +346,6 @@ def scan_once(subs=None, send=True):
             if config.ONLY_ON_CHANGE or not due:
                 continue
 
-        # Dung muc DA KHOA (Entry/SL/TP co dinh), gia hien tai van cap nhat.
-        disp = dict(res)
-        disp["entry"] = lock["entry"]
-        disp["sl"] = lock["sl"]
-        disp["tp"] = lock["tp"]
-        disp["leverage"] = lock["leverage"]
-        disp["leverage_max"] = lock["leverage_max"]
         text = format_signal(disp, repeat=not changed)
         sent = 0
         for cid in list(subs):
@@ -369,7 +353,14 @@ def scan_once(subs=None, send=True):
                 telegram_bot.send_message(text, chat_id=cid)
                 sent += 1
             except Exception as e:
-                print(f"    -> [LOI GUI {cid}] {e}")
+                msg = str(e).lower()
+                # Bot bi kick / nhom bi xoa / user chan -> tu xoa khoi danh sach
+                if any(k in msg for k in ("403", "forbidden", "kicked", "deleted", "chat not found", "blocked")):
+                    subs.discard(cid)
+                    save_subscribers(subs)
+                    print(f"    -> Da tu XOA noi khong gui duoc: {cid}")
+                else:
+                    print(f"    -> [LOI GUI {cid}] {e}")
         if sent:
             kind = "nhac lai" if not changed else "MOI"
             print(f"    -> Da gui tin hieu {res['side']} {symbol} ({kind}) cho {sent} nguoi")
