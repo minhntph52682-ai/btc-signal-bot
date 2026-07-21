@@ -86,7 +86,6 @@ def backtest(symbol, interval=None, limit=1000):
     win_rate = (wins / total * 100) if total else 0.0
     rr = config.ATR_TP_MULT / config.ATR_SL_MULT  # ti le loi/lo moi lenh
 
-    # Ti le thang HOA VON (breakeven) voi RR nay: 1/(1+RR)
     breakeven = 100 / (1 + rr)
 
     return {
