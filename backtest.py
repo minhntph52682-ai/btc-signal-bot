@@ -84,7 +84,7 @@ def backtest(symbol, interval=None, limit=1000):
 
     total = wins + losses
     win_rate = (wins / total * 100) if total else 0.0
-    rr = config.ATR_TP_MULT / config.ATR_SL_MULT  # ti le loi/lo moi lenh
+    rr = config.ATR_TP_MULT / config.ATR_SL_MULT  
 
     breakeven = 100 / (1 + rr)
 
