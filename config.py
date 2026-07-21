@@ -4,6 +4,18 @@ Co the sua truc tiep trong file nay, HOAC dat bien moi truong (environment varia
 LUU Y BAO MAT: Token bot la bi mat. Neu bi lo, vao @BotFather -> /revoke de tao token moi.
 """
 import os
+import datetime
+
+# ====== MUI GIO ======
+# Server chay o UTC, nhung nguoi dung o Viet Nam (UTC+7).
+# Dung mui gio nay cho moi thoi gian HIEN THI cho nguoi dung.
+VN_TZ = datetime.timezone(datetime.timedelta(hours=7))
+
+
+def now_vn():
+    """Thoi diem hien tai theo gio Viet Nam (UTC+7)."""
+    return datetime.datetime.now(VN_TZ)
+
 
 # ====== BI MAT (token, API key) ======
 # Tat ca token / API key nam trong file .env (da bi .gitignore chan, khong len GitHub).

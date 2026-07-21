@@ -247,7 +247,7 @@ def _live_price_line(symbol, price, prev, stopped=False):
             arrow = " \U0001F53A"   # tam giac do huong len
         elif price < prev:
             arrow = " \U0001F53B"   # tam giac xanh huong xuong
-    now = datetime.datetime.now().strftime("%H:%M:%S")
+    now = config.now_vn().strftime("%H:%M:%S")
     if stopped:
         status = "⏹ da dung (go /p de chay lai)"
     else:
@@ -443,7 +443,7 @@ def main():
         now = time.time()
         if now - last_scan >= config.LOOP_SECONDS:
             last_scan = now
-            ts = datetime.datetime.now().strftime("%H:%M:%S")
+            ts = config.now_vn().strftime("%H:%M:%S")
             print(f"\n[{ts}] Dang quet... ({len(subs)} nguoi dung)")
             try:
                 scan_once(subs=subs, send=True)
