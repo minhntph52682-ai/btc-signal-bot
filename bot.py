@@ -403,6 +403,12 @@ def start_health_server():
             self.end_headers()
             self.wfile.write(b"BTC signal bot is running")
 
+        def do_HEAD(self):
+            # UptimeRobot mac dinh ping bang HEAD. Khong co ham nay ->
+            # Python tra 501 Not Implemented -> UptimeRobot bao "Down".
+            self.send_response(200)
+            self.end_headers()
+
         def log_message(self, *a):
             pass  # khong in log HTTP cho do roi
 
